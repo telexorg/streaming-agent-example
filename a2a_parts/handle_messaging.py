@@ -1,12 +1,13 @@
 from fastapi.responses import StreamingResponse
 import a2a.types as a2a_types
 import a2a.error_types as a2a_error_types
-from uuid import uuid4 as uuid
 import os
 import time
 import json
 import random
 from functools import reduce
+from uuid import uuid4 as uuid
+from a2a_parts.messaging import build_agent_message_from_line
 
 def get_task_id(params: a2a_types.MessageSendParams):
     task_id = uuid().hex if not params.message.taskId else params.message.taskId
@@ -23,7 +24,6 @@ def waypoints_generator():
     for waypoint in waypoints[0: 10]:
         data = json.dumps(waypoint)
         yield f"event: locationUpdate\ndata: {data}\n\n"
-        time.sleep(10)
 
 def get_random_sherlock_chapter():
     file_path = "documents/the-adventures-of-sherlock-holmes.txt"
@@ -66,12 +66,9 @@ def get_random_sherlock_chapter():
             if stripped == chosen_title.upper():
                 in_chapter = True
 
-                meta_message = a2a_types.Message(
-                    messageId=uuid().hex,
-                    parts=[a2a_types.TextPart(text=chosen_title.title())],
-                    role="agent",
-                )
-                yield f"event: storyMeta\ndata: {meta_message.model_dump_json()}\n\n"
+                meta_response = build_agent_message_from_line(chosen_title.title())
+
+                yield f"event: storyMeta\ndata: {meta_response.model_dump_json()}\n\n"
                 continue
 
             # If we're inside the chapter and we hit the next one, break
@@ -80,13 +77,8 @@ def get_random_sherlock_chapter():
 
             if in_chapter:
                 if line.strip():
-                    a2a_message = a2a_types.Message(
-                        messageId=uuid().hex,
-                        parts=[a2a_types.TextPart(text=line.strip())],
-                        role="agent",
-                    )
-                    yield f"event: storyLine\ndata: {a2a_message.model_dump_json()}\n\n"
-                    time.sleep(0.03)
+                    a2a_response = build_agent_message_from_line(line)
+                    yield f"event: storyLine\ndata: {a2a_response.model_dump_json()}\n\n"
 
 
 def get_random_bible_chapter():
@@ -152,10 +144,9 @@ def get_random_bible_chapter():
             break
 
 
-        a2a_message = a2a_types.Message(messageId=uuid().hex, parts=[a2a_types.TextPart(text=line.strip())], role="agent")
-        a2a_message_json = a2a_message.model_dump_json()
+        a2a_response = build_agent_message_from_line(line)
 
-        yield f"event: verse\ndata: {a2a_message_json}\n\n"
+        yield f"event: verse\ndata: {a2a_response.model_dump_json()}\n\n"
 
 
 def get_random_rj_scene():
@@ -216,24 +207,15 @@ def get_random_rj_scene():
 
     # Yield ACT and SCENE as meta info
     meta_text = f"{chosen['act']} - {chosen['scene']}"
-    meta_message = a2a_types.Message(
-        messageId=uuid().hex,
-        parts=[a2a_types.TextPart(text=meta_text)],
-        role="agent",
-    )
-    meta_json = meta_message.model_dump_json()
-    yield f"event: sceneMeta\ndata: {meta_json}\n\n"
+    meta_response = build_agent_message_from_line(meta_text)
+
+    yield f"event: sceneMeta\ndata: {meta_response.model_dump_json()}\n\n"
 
     # Yield lines from the scene
     for line in chosen["lines"]:
-        a2a_message = a2a_types.Message(
-            messageId=uuid().hex,
-            parts=[a2a_types.TextPart(text=line.strip())],
-            role="agent",
-        )
-        a2a_message_json = a2a_message.model_dump_json()
-        yield f"event: sceneLine\ndata: {a2a_message_json}\n\n"
-        time.sleep(0.05)
+        a2a_response = build_agent_message_from_line(line)
+
+        yield f"event: sceneLine\ndata: {a2a_response.model_dump_json()}\n\n"
 
 
 def handle_message_stream(params: a2a_types.MessageSendParams):

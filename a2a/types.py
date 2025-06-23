@@ -215,7 +215,6 @@ class StreamMessageRequest(JSONRPCRequest):
 class SendMessageResponse(JSONRPCResponse):
     result: Task | Message | None = None
 
-
 class SendStreamingMessageSuccessResponse(JSONRPCResponse):
     result: Message | Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent
 
