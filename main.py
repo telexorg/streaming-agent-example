@@ -25,6 +25,12 @@ def handle_rpc(request_data: dict):
         print(f"Error processing request: {e}")
         raise HTTPException(status_code=400, detail="Could not handle task")
 
+@app.get("/")
+def agent_card(request: Request):
+    return """
+        <h1>Streaming Agent Example</h1><p>An agent that streams responses and can stream the bible, Romeo and Juliet, or Sherlock Holmes. If a keyword like "bible" is supplied, it streams the bible, if romeo or juliet are supplied, it streams a Scene of the play. If none of these are supplied, it streams a chapter of the Adventures of Sherlock Holmes.</p>
+    """
+
 
 @app.get("/.well-known/agent.json")
 def agent_card(request: Request):

@@ -10,7 +10,7 @@ agent_name_suffix = (
 
 def get_card(base_url):
     card = a2a_types.AgentCard(
-        name=f"Streaming Agent{agent_name_suffix}",
+        name=f"Streaming Agent Example{agent_name_suffix}",
         description="An agent that streams popular text content like the Bible, Romeo and Juliet, and The Art of War",
         url=f"{base_url}",
         provider=a2a_types.AgentProvider(
