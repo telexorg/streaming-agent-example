@@ -27,8 +27,9 @@ def waypoints_generator():
 
 def get_random_sherlock_chapter():
     file_path = "documents/the-adventures-of-sherlock-holmes.txt"
+    stream_limit = int(os.getenv("STREAM_LIMIT", "50000"))  # default to 50KB if not set
+    total_bytes_sent = 0
 
-    # From the Table of Contents
     chapter_titles = [
         "I. A SCANDAL IN BOHEMIA",
         "II. THE RED-HEADED LEAGUE",
@@ -55,31 +56,33 @@ def get_random_sherlock_chapter():
         for line in f:
             stripped = line.strip().upper()
 
-            # Wait until we pass the TOC and reach the real content
             if not passed_intro:
                 if stripped == "I. A SCANDAL IN BOHEMIA":
                     passed_intro = True
                 else:
-                    continue  # skip lines until we reach real chapters
+                    continue
 
-            # Start capturing if the chapter title matches
             if stripped == chosen_title.upper():
                 in_chapter = True
 
                 meta_response = build_agent_message_from_line(chosen_title.title())
-
-                yield f"event: storyMeta\ndata: {meta_response.model_dump_json()}\n\n"
+                chunk = f"event: storyMeta\ndata: {meta_response.model_dump_json()}\n\n"
+                total_bytes_sent += len(chunk.encode("utf-8"))
+                if total_bytes_sent > stream_limit:
+                    break
+                yield chunk
                 continue
 
-            # If we're inside the chapter and we hit the next one, break
             if in_chapter and next_title and stripped == next_title.upper():
                 break
 
-            if in_chapter:
-                if line.strip():
-                    a2a_response = build_agent_message_from_line(line)
-                    yield f"event: storyLine\ndata: {a2a_response.model_dump_json()}\n\n"
-
+            if in_chapter and line.strip():
+                a2a_response = build_agent_message_from_line(line)
+                chunk = f"event: storyLine\ndata: {a2a_response.model_dump_json()}\n\n"
+                total_bytes_sent += len(chunk.encode("utf-8"))
+                if total_bytes_sent > stream_limit:
+                    break
+                yield chunk
 
 def get_random_bible_chapter():
     '''
